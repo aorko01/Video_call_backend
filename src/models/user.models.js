@@ -9,6 +9,30 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    middleName: {
+      type: String,
+      trim: true,
+      default: "", // Optional field
+    },
+    lastName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: true,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "non-binary", "other"],
+      required: true,
+    },
     profilePictureUrl: {
       type: String,
       default: "", 

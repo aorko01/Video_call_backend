@@ -11,7 +11,16 @@ const registerUser = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { username, profilePictureUrl, mobileNumber } = req.body;
+  const {
+    username,
+    profilePictureUrl,
+    mobileNumber,
+    firstName,
+    middleName,
+    lastName,
+    dateOfBirth,
+    gender
+  } = req.body;
 
   try {
     // Check if the user already exists
@@ -31,6 +40,11 @@ const registerUser = async (req, res) => {
       username,
       profilePictureUrl,
       mobileNumber,
+      firstName,
+      middleName,
+      lastName,
+      dateOfBirth,
+      gender,
       status: 'offline', // Default status
     });
 
@@ -45,18 +59,24 @@ const registerUser = async (req, res) => {
   }
 };
 
+
 const checkMobileNumber = asyncHandler(async (req, res) => {
   const { mobileNumber } = req.body;
+  // Validate mobileNumber input
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
   try {
     const existingMobile = await User.findOne({ mobileNumber });
     if (existingMobile) {
       return res.status(400).json({ message: 'Mobile number already registered' });
     }
-  }
-  catch (error) {
+    return res.status(200).json({ message: 'Mobile number is available' });
+  } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
