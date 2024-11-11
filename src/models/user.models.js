@@ -47,10 +47,6 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    accessToken: {
-      type: String,
-      default: "",
-    },
     refreshToken: {
       type: String,
       default: "",
@@ -69,7 +65,7 @@ userSchema.methods.generateAccessToken = function () {
   const accessToken = jwt.sign(
     { id: user._id, username: user.username },
     accessTokenSecret,
-    { expiresIn: "1h" } // Set your desired expiration time
+    { expiresIn: process.env.ACCESS_TOKEN_LIFE } // Set your desired expiration time
   );
 
   // Save the generated token to the user instance
@@ -88,7 +84,7 @@ userSchema.methods.generateRefreshToken = function () {
   const refreshToken = jwt.sign(
     { id: user._id, username: user.username },
     refreshTokenSecret,
-    { expiresIn: "7d" } 
+    { expiresIn: process.env.REFRESH_TOKEN_LIFE } 
   );
 
   user.refreshToken = refreshToken;

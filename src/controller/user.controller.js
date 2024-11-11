@@ -6,7 +6,6 @@ import path from 'path';
 
 // User registration controller with file upload
 const registerUser = asyncHandler(async (req, res) => {
-  console.log("Reached")
   try {
     console.log('Request body:', req.body);
     console.log('Request file:', req.file);
@@ -65,7 +64,7 @@ const registerUser = asyncHandler(async (req, res) => {
       }
     }
 
-    // Create and save new user
+    // Create new user instance
     const newUser = new User({
       username,
       profilePictureUrl,
@@ -78,9 +77,27 @@ const registerUser = asyncHandler(async (req, res) => {
       status: 'offline', // Default status
     });
 
+    // Generate tokens
+    const accessToken = newUser.generateAccessToken();
+    const refreshToken = newUser.generateRefreshToken();
+
+    // Save user with refresh token
     await newUser.save();
 
-    // Respond with success and user data
+    // Set tokens in HTTP-only cookies
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure in production
+      maxAge: 60 * 60 * 1000, // 1 hour
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure in production
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Respond with success, user data and tokens
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -90,7 +107,9 @@ const registerUser = asyncHandler(async (req, res) => {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         mobileNumber: newUser.mobileNumber
-      }
+      },
+      accessToken,
+      refreshToken
     });
 
   } catch (error) {
