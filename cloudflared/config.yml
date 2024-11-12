@@ -1,0 +1,6 @@
+tunnel: f94ea443-786e-4e25-8211-3b34c8c9d55a
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - hostname: video_call_app.aorko.me  # Replace with your actual domain
+    service: http://localhost:3000
+  - service: http_status:404
