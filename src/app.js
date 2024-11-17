@@ -1,5 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import { verifyJWT } from "./middleware/auth.middleware.js";
 import cors from "cors";
 
 const app = express();
@@ -26,7 +27,7 @@ import messageRouter from './routes/message.route.js'; // Adjust the path as nec
 // Use the registration router
 app.use('/api/v1/user', registrationRouter); // Prefix all routes in registrationRouter with /api
 
-app.get('/test', (req, res) => {
+app.get('/test',verifyJWT, (req, res) => {
     res.json({ message: "Route is working!" });
 });
 
