@@ -22,12 +22,14 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 import registrationRouter from './routes/user.router.js'; // Adjust the path as necessary
-
+import messageRouter from './routes/message.route.js'; // Adjust the path as necessary
 // Use the registration router
 app.use('/api/v1/user', registrationRouter); // Prefix all routes in registrationRouter with /api
 
 app.get('/test', (req, res) => {
     res.json({ message: "Route is working!" });
 });
+
+app.use('/api/v1/message', messageRouter);
 
 export default app;
