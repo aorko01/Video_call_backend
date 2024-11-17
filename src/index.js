@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import app from "./app.js";
 import connectDB from "./db/index.js";
-import setupSocket from "./utils/socket.js"; // Import the socket setup
+import setupSocket from "./config/socket.js";
 
 // Load environment variables from .env file
 dotenv.config();

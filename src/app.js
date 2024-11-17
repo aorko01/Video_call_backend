@@ -33,4 +33,9 @@ app.get('/test',verifyJWT, (req, res) => {
 
 app.use('/api/v1/message', messageRouter);
 
+app.get("/test-file", (req, res) => {
+    res.sendFile("test.html", { root: "public" });
+});
+
+
 export default app;
