@@ -12,7 +12,6 @@ const setupSocket = (server) => {
         cors: {
             origin: process.env.CORS_ORIGIN || "http://localhost:3000",
             credentials: true,
-            // Add support for binary data transfer
             maxHttpBufferSize: 1e8 // 100 MB max file size
         }
     });
@@ -43,15 +42,26 @@ const setupSocket = (server) => {
     });
 
     // Handle socket connections
-    io.on('connection', (socket) => {
+    io.on('connection', async (socket) => {
         console.log(`User connected: ${socket.user._id}`);
-        onlineUsers.set(socket.user._id.toString(), socket.id);
         
-        // Broadcast user's online status
-        io.emit('userStatus', {
-            userId: socket.user._id,
-            status: 'online'
-        });
+        try {
+            // Update user status to online in database
+            await User.findByIdAndUpdate(socket.user._id, {
+                status: 'online'
+            });
+
+            // Store socket id for real-time communication
+            onlineUsers.set(socket.user._id.toString(), socket.id);
+            
+            // Broadcast user's online status
+            io.emit('userStatus', {
+                userId: socket.user._id,
+                status: 'online'
+            });
+        } catch (error) {
+            console.error('Error updating user online status:', error);
+        }
 
         // Handle text messages
         socket.on('sendMessage', async (data) => {
@@ -86,12 +96,12 @@ const setupSocket = (server) => {
                     filename: data.filename,
                     mimeType: data.mimeType
                 });
-
+        
                 // Validate file data
                 if (!data.file || !data.receiverId || !data.fileType) {
                     throw new Error('Missing required file data');
                 }
-
+        
                 // Handle the file upload
                 const message = await handleFileMessage({
                     senderId: socket.user._id,
@@ -99,12 +109,12 @@ const setupSocket = (server) => {
                     file: data.file,
                     fileType: data.fileType,
                     filename: data.filename || `file-${Date.now()}`,
-                    mimeType: data.mimeType
+                    accessToken: data.accessToken // Ensure this is passed
                 });
-
+        
                 // Emit success to sender
                 socket.emit('messageSent', {
-                    ...message.toObject(),
+                    ...message.data.message, // Use the returned data directly
                     status: 'sent'
                 });
                 
@@ -112,7 +122,7 @@ const setupSocket = (server) => {
                 const receiverSocketId = onlineUsers.get(data.receiverId);
                 if (receiverSocketId) {
                     io.to(receiverSocketId).emit('messageReceived', {
-                        ...message.toObject(),
+                        ...message.data.message, // Use the returned data directly
                         status: 'received'
                     });
                 }
@@ -124,6 +134,7 @@ const setupSocket = (server) => {
                 });
             }
         });
+        
 
         // Handle file upload progress (optional)
         socket.on('fileUploadProgress', (data) => {
@@ -177,9 +188,11 @@ const setupSocket = (server) => {
         // Handle disconnection
         socket.on('disconnect', async () => {
             console.log(`User disconnected: ${socket.user._id}`);
-            onlineUsers.delete(socket.user._id.toString());
             
             try {
+                // Remove from online users map
+                onlineUsers.delete(socket.user._id.toString());
+                
                 // Update user status in database
                 await User.findByIdAndUpdate(socket.user._id, {
                     status: 'offline',

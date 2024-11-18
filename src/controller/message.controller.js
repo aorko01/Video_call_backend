@@ -1,75 +1,55 @@
 import asyncHandler from 'express-async-handler';
-import Message from '../models/message.models.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import path from 'path';
-import User from '../models/user.models.js';
 
-// Send message controller
-const sendMessage = asyncHandler(async (req, res) => {
+// Updated controller to handle only file upload
+const sendFile = asyncHandler(async (req, res) => {
   try {
     console.log('Request body:', req.body);
     console.log('Request file:', req.file);
 
-    const { senderId, receiverId, type, content } = req.body;
-
-    // Validate required fields
-    if (!senderId || !receiverId || !type) {
+    // If no file is uploaded, return error
+    if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Sender ID, receiver ID, and message type are required',
+        message: 'No file uploaded',
       });
     }
 
-    // Check if sender and receiver exist in the database
-    const sender = await User.findById(senderId);
-    const receiver = await User.findById(receiverId);
+    // Handle file upload to Cloudinary
+    const localFilePath = path.join('public', 'temp', req.file.filename);
+    const cloudinaryResponse = await uploadOnCloudinary(localFilePath);
 
-    if (!sender || !receiver) {
-      return res.status(404).json({
+    if (!cloudinaryResponse) {
+      return res.status(400).json({
         success: false,
-        message: 'Sender or receiver does not exist',
+        message: 'Error uploading file to Cloudinary',
       });
     }
 
-    let messageContent = { type, content };
-
-    // If the message type involves file upload (image or file)
-    if (req.file) {
-      const localFilePath = path.join('public', 'temp', req.file.filename);
-      const cloudinaryResponse = await uploadOnCloudinary(localFilePath);
-
-      if (cloudinaryResponse) {
-        messageContent.content = cloudinaryResponse.url;
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: 'Error uploading file to Cloudinary',
-        });
-      }
-    }
-
-    // Create and save the new message
-    const newMessage = new Message({
-      senderId,
-      receiverId,
-      messageContent,
-    });
-
-    await newMessage.save();
-
-    res.status(201).json({
+    // Return success with the uploaded file URL
+    res.status(200).json({
       success: true,
-      message: 'Message sent successfully',
-      data: newMessage,
+      message: 'File uploaded successfully',
+      data: {
+        fileUrl: cloudinaryResponse.url,
+        fileType: req.file.mimetype,
+        fileName: req.file.originalname,
+        // Include additional Cloudinary response data if needed
+        publicId: cloudinaryResponse.public_id,
+        format: cloudinaryResponse.format,
+        size: cloudinaryResponse.bytes,
+      }
     });
+
   } catch (error) {
-    console.error('Error in sendMessage:', error);
+    console.error('Error in file upload:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while sending message',
+      message: 'Server error while uploading file',
       error: error.message,
     });
   }
 });
 
-export { sendMessage };
+export { sendFile };

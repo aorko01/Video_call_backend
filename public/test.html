@@ -69,6 +69,24 @@
         .file-input {
             margin-bottom: 10px;
         }
+        .file-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px 0;
+        }
+        .message img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status-message {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
     </style>
 </head>
 <body>
@@ -166,7 +184,9 @@
             });
 
             socket.on('messageError', (error) => {
-                appendMessage(messagesId, { messageContent: { content: `Error: ${error.error}` } }, 'error');
+                appendMessage(messagesId, { 
+                    messageContent: { content: `Error: ${error.message || error.error}` }
+                }, 'error');
             });
 
             socket.on('userStatus', (status) => {
@@ -174,7 +194,7 @@
                     messageContent: { 
                         content: `User ${status.userId} is ${status.status}` 
                     }
-                }, 'status');
+                }, 'status-message');
             });
         }
 
@@ -182,7 +202,16 @@
             const messagesDiv = document.getElementById(messagesId);
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
-            messageDiv.textContent = message.messageContent.content;
+
+            if (message.messageContent.type === 'image') {
+                const img = document.createElement('img');
+                img.src = message.messageContent.content;
+                img.alt = message.messageContent.filename || 'Image';
+                messageDiv.appendChild(img);
+            } else {
+                messageDiv.textContent = message.messageContent.content;
+            }
+
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
@@ -209,15 +238,7 @@
             messageInput.value = '';
         }
 
-        function sendMessage1() {
-            sendMessage(socket1, 'message1', 'receiverId1');
-        }
-
-        function sendMessage2() {
-            sendMessage(socket2, 'message2', 'receiverId2');
-        }
-
-        function sendFile(socket, fileId, receiverId) {
+        async function sendFile(socket, fileId, receiverId) {
             if (!socket) {
                 alert('Please connect first');
                 return;
@@ -232,21 +253,32 @@
             }
 
             const file = fileInput.files[0];
-            const fileType = file.type.startsWith('image/') ? 'image' : 'file';
+            const fileType = file.type.startsWith('image/') ? 'image' : 'document';
 
-            // Create FormData and append file
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('receiverId', receiverInput.value);
-            formData.append('fileType', fileType);
+            // Create array buffer from file
+            const buffer = await file.arrayBuffer();
 
             socket.emit('sendFile', {
                 receiverId: receiverInput.value,
-                file: file,
-                fileType: fileType
+                file: {
+                    buffer: buffer,
+                    mimetype: file.type,
+                    originalname: file.name,
+                    size: file.size
+                },
+                fileType: fileType,
+                filename: file.name
             });
 
             fileInput.value = '';
+        }
+
+        function sendMessage1() {
+            sendMessage(socket1, 'message1', 'receiverId1');
+        }
+
+        function sendMessage2() {
+            sendMessage(socket2, 'message2', 'receiverId2');
         }
 
         function sendFile1() {
