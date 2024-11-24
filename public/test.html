@@ -141,11 +141,15 @@
     <script>
         let socket1 = null;
         let socket2 = null;
+        
+        const SOCKET_SERVER_URL = 'https://video_call_app.aorko.me';
 
         function connectSocket(token, statusId) {
             return new Promise((resolve) => {
-                const socket = io('http://localhost:3000', {
-                    auth: { token }
+                const socket = io(SOCKET_SERVER_URL, {
+                    auth: { token },
+                    withCredentials: true,
+                    transports: ['websocket', 'polling']
                 });
 
                 socket.on('connect', () => {
@@ -176,24 +180,26 @@
 
         function setupSocketListeners(socket, messagesId) {
             socket.on('messageReceived', (message) => {
+                console.log('Received message:', message);
                 appendMessage(messagesId, message, 'received');
             });
 
             socket.on('messageSent', (message) => {
+                console.log('Sent message:', message);
                 appendMessage(messagesId, message, 'sent');
             });
 
             socket.on('messageError', (error) => {
-                appendMessage(messagesId, { 
-                    messageContent: { content: `Error: ${error.message || error.error}` }
+                console.error('Message error:', error);
+                appendMessage(messagesId, {
+                    content: `Error: ${error.message || error.error || 'Unknown error'}`
                 }, 'error');
             });
 
             socket.on('userStatus', (status) => {
-                appendMessage(messagesId, { 
-                    messageContent: { 
-                        content: `User ${status.userId} is ${status.status}` 
-                    }
+                console.log('User status:', status);
+                appendMessage(messagesId, {
+                    content: `User ${status.userId} is ${status.status}`
                 }, 'status-message');
             });
         }
@@ -203,13 +209,37 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
 
-            if (message.messageContent.type === 'image') {
-                const img = document.createElement('img');
-                img.src = message.messageContent.content;
-                img.alt = message.messageContent.filename || 'Image';
-                messageDiv.appendChild(img);
+            // Safe message content extraction
+            let content = '';
+            let messageType = '';
+
+            // Handle different message structures
+            if (message.messageContent) {
+                messageType = message.messageContent.type;
+                content = message.messageContent.content;
+            } else if (message.data && message.data.messageContent) {
+                messageType = message.data.messageContent.type;
+                content = message.data.messageContent.content;
+            } else if (message.content) {
+                content = message.content;
             } else {
-                messageDiv.textContent = message.messageContent.content;
+                content = 'Invalid message format';
+            }
+
+            // Handle different types of content
+            if (messageType === 'image') {
+                const img = document.createElement('img');
+                img.src = content;
+                img.alt = 'Image';
+                messageDiv.appendChild(img);
+            } else if (messageType === 'file') {
+                const link = document.createElement('a');
+                link.href = content;
+                link.textContent = message.metadata?.filename || 'Download File';
+                link.target = '_blank';
+                messageDiv.appendChild(link);
+            } else {
+                messageDiv.textContent = content;
             }
 
             messagesDiv.appendChild(messageDiv);
@@ -267,7 +297,8 @@
                     size: file.size
                 },
                 fileType: fileType,
-                filename: file.name
+                filename: file.name,
+                accessToken: document.getElementById(socket === socket1 ? 'token1' : 'token2').value
             });
 
             fileInput.value = '';

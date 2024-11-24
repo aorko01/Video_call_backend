@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const messageSchema = new mongoose.Schema({
   senderId: {
@@ -30,6 +31,8 @@ const messageSchema = new mongoose.Schema({
     default: 'sent', // Default status
   },
 }, { timestamps: true });
+
+messageSchema.plugin(mongooseAggregatePaginate);
 
 const Message = mongoose.model('Message', messageSchema);
 
