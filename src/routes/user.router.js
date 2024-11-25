@@ -1,8 +1,9 @@
-import { registerUser, checkMobileNumber, verifyOtp } from '../controller/user.controller.js';
+import { registerUser, checkMobileNumber, verifyOtp,refreshAccessToken,isAccessTokenValid } from '../controller/user.controller.js';
 import { body } from 'express-validator';
 import { Router } from 'express';
 import { upload } from '../middleware/multer.middleware.js';
 import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
+import {verifyJWT} from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -117,5 +118,9 @@ router.post('/verifyOtp',
   ],
   verifyOtp
 );
+
+router.post('/refreshAccessToken', refreshAccessToken);
+
+router.post('/isAccessTokenValid',verifyJWT,isAccessTokenValid);
 
 export default router;

@@ -3,6 +3,8 @@ import { validationResult } from 'express-validator';
 import asyncHandler from 'express-async-handler';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import path from 'path';
+import jwt from 'jsonwebtoken';
+
 
 // User registration controller with file upload
 const registerUser = asyncHandler(async (req, res) => {
@@ -221,9 +223,62 @@ const verifyOtp = asyncHandler(async (req, res) => {
   }
 });
 
+const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    // Verify the refresh token
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    // Find the user associated with the token
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if the refresh token matches the stored one
+    if (user.refreshToken !== refreshToken) {
+      return res.status(403).json({ error: "Invalid refresh token" });
+    }
+
+    // Generate a new access token
+    const newAccessToken = user.generateAccessToken();
+
+    res.status(200).json({
+      message: "Access token refreshed successfully",
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Refresh token has expired" });
+    }
+
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const isAccessTokenValid = async (req, res) => {
+  const user= req.user;
+  if(user){
+    return res.status(200).json({ message: "Access token is valid",valid:true });
+  }
+
+  return res.status(401).json({ message: "Access token is invalid",valid:false });  
+}
+
 export { 
   registerUser,
   updateProfilePicture,
   checkMobileNumber,
-  verifyOtp 
+  verifyOtp,
+  refreshAccessToken,
+  isAccessTokenValid
 };
