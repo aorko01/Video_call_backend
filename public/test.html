@@ -91,7 +91,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- User 1 Chat Box -->
         <div class="chat-box">
             <h2>User 1</h2>
             <div class="status" id="status1">Disconnected</div>
@@ -99,9 +98,9 @@
                 <input type="text" id="token1" placeholder="Enter access token" />
                 <button onclick="connectUser1()">Connect</button>
             </div>
-            <br>
             <div>
                 <input type="text" id="receiverId1" placeholder="Enter receiver ID" />
+                <input type="text" id="conversationId1" placeholder="Enter conversation ID (optional)" />
             </div>
             <div class="messages" id="messages1"></div>
             <div class="file-input">
@@ -114,7 +113,6 @@
             </div>
         </div>
 
-        <!-- User 2 Chat Box -->
         <div class="chat-box">
             <h2>User 2</h2>
             <div class="status" id="status2">Disconnected</div>
@@ -122,9 +120,9 @@
                 <input type="text" id="token2" placeholder="Enter access token" />
                 <button onclick="connectUser2()">Connect</button>
             </div>
-            <br>
             <div>
                 <input type="text" id="receiverId2" placeholder="Enter receiver ID" />
+                <input type="text" id="conversationId2" placeholder="Enter conversation ID (optional)" />
             </div>
             <div class="messages" id="messages2"></div>
             <div class="file-input">
@@ -141,7 +139,7 @@
     <script>
         let socket1 = null;
         let socket2 = null;
-        
+
         const SOCKET_SERVER_URL = 'https://video_call_app.aorko.me';
 
         function connectSocket(token, statusId) {
@@ -180,27 +178,19 @@
 
         function setupSocketListeners(socket, messagesId) {
             socket.on('messageReceived', (message) => {
-                console.log('Received message:', message);
                 appendMessage(messagesId, message, 'received');
             });
 
             socket.on('messageSent', (message) => {
-                console.log('Sent message:', message);
                 appendMessage(messagesId, message, 'sent');
             });
 
             socket.on('messageError', (error) => {
-                console.error('Message error:', error);
-                appendMessage(messagesId, {
-                    content: `Error: ${error.message || error.error || 'Unknown error'}`
-                }, 'error');
+                appendMessage(messagesId, { content: `Error: ${error.message}` }, 'error');
             });
 
             socket.on('userStatus', (status) => {
-                console.log('User status:', status);
-                appendMessage(messagesId, {
-                    content: `User ${status.userId} is ${status.status}`
-                }, 'status-message');
+                appendMessage(messagesId, { content: `User ${status.userId} is ${status.status}` }, 'status-message');
             });
         }
 
@@ -209,24 +199,9 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
 
-            // Safe message content extraction
-            let content = '';
-            let messageType = '';
+            let content = message.messageContent?.content || message.content || 'Unknown message';
+            let messageType = message.messageContent?.type || '';
 
-            // Handle different message structures
-            if (message.messageContent) {
-                messageType = message.messageContent.type;
-                content = message.messageContent.content;
-            } else if (message.data && message.data.messageContent) {
-                messageType = message.data.messageContent.type;
-                content = message.data.messageContent.content;
-            } else if (message.content) {
-                content = message.content;
-            } else {
-                content = 'Invalid message format';
-            }
-
-            // Handle different types of content
             if (messageType === 'image') {
                 const img = document.createElement('img');
                 img.src = content;
@@ -246,7 +221,7 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        function sendMessage(socket, messageId, receiverId) {
+        function sendMessage(socket, messageId, receiverId, conversationId) {
             if (!socket) {
                 alert('Please connect first');
                 return;
@@ -254,21 +229,18 @@
 
             const messageInput = document.getElementById(messageId);
             const receiverInput = document.getElementById(receiverId);
-            
-            if (!messageInput.value.trim() || !receiverInput.value.trim()) {
-                alert('Please enter both message and receiver ID');
-                return;
-            }
+            const conversationInput = document.getElementById(conversationId);
 
             socket.emit('sendMessage', {
                 receiverId: receiverInput.value,
-                content: messageInput.value
+                content: messageInput.value,
+                conversationId: conversationInput.value || null
             });
 
             messageInput.value = '';
         }
 
-        async function sendFile(socket, fileId, receiverId) {
+        async function sendFile(socket, fileId, receiverId, conversationId) {
             if (!socket) {
                 alert('Please connect first');
                 return;
@@ -276,58 +248,41 @@
 
             const fileInput = document.getElementById(fileId);
             const receiverInput = document.getElementById(receiverId);
-            
-            if (!fileInput.files[0] || !receiverInput.value.trim()) {
-                alert('Please select a file and enter receiver ID');
+            const conversationInput = document.getElementById(conversationId);
+
+            const file = fileInput.files[0];
+            if (!file || !receiverInput.value.trim()) {
+                alert('Select a file and enter receiver ID');
                 return;
             }
 
-            const file = fileInput.files[0];
-            const fileType = file.type.startsWith('image/') ? 'image' : 'document';
-
-            // Create array buffer from file
             const buffer = await file.arrayBuffer();
-
             socket.emit('sendFile', {
                 receiverId: receiverInput.value,
-                file: {
-                    buffer: buffer,
-                    mimetype: file.type,
-                    originalname: file.name,
-                    size: file.size
-                },
-                fileType: fileType,
+                file: { buffer, mimetype: file.type, originalname: file.name, size: file.size },
+                fileType: file.type.startsWith('image/') ? 'image' : 'document',
                 filename: file.name,
-                accessToken: document.getElementById(socket === socket1 ? 'token1' : 'token2').value
+                conversationId: conversationInput.value || null
             });
 
             fileInput.value = '';
         }
 
         function sendMessage1() {
-            sendMessage(socket1, 'message1', 'receiverId1');
+            sendMessage(socket1, 'message1', 'receiverId1', 'conversationId1');
         }
 
         function sendMessage2() {
-            sendMessage(socket2, 'message2', 'receiverId2');
+            sendMessage(socket2, 'message2', 'receiverId2', 'conversationId2');
         }
 
         function sendFile1() {
-            sendFile(socket1, 'file1', 'receiverId1');
+            sendFile(socket1, 'file1', 'receiverId1', 'conversationId1');
         }
 
         function sendFile2() {
-            sendFile(socket2, 'file2', 'receiverId2');
+            sendFile(socket2, 'file2', 'receiverId2', 'conversationId2');
         }
-
-        // Add event listeners for Enter key
-        document.getElementById('message1').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage1();
-        });
-
-        document.getElementById('message2').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage2();
-        });
     </script>
 </body>
 </html>
