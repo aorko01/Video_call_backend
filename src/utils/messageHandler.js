@@ -1,5 +1,6 @@
 import models from '../models/message.models.js';
 const { Message, Conversation } = models;
+import Inbox from '../models/Inbox.models.js';
 import axios from 'axios';
 import FormData from 'form-data';
 
@@ -11,57 +12,83 @@ const isValidFileType = (mimetype, allowedTypes) => {
 };
 
 export const handleMessage = async ({ senderId, receiverId, content, conversationId }) => {
+    try {
+        let conversation;
+        
+        if (!conversationId) {
+            // Create a new conversation if no ID is provided
+            conversation = new Conversation({
+                participants: [senderId, receiverId],
+                messages: [],
+                messageCount: 0
+            });
+            await conversation.save();
+            conversationId = conversation._id;
 
-  // conversationId='67471a5d13383282bf09a671'
-  try {
-      let conversation;
+            // Check if sender and receiver have an inbox entry, create/update if needed
+            await Promise.all([
+                Inbox.updateOne(
+                    { userId: senderId },
+                    { $addToSet: { conversations: conversationId } },
+                    { upsert: true }
+                ),
+                Inbox.updateOne(
+                    { userId: receiverId },
+                    { $addToSet: { conversations: conversationId } },
+                    { upsert: true }
+                )
+            ]);
+        } else {
+            // Find existing conversation
+            conversation = await Conversation.findById(conversationId);
+            if (!conversation) {
+                throw new Error('Conversation not found');
+            }
 
-      if (!conversationId) {
-          // Create a new conversation if no ID is provided
-          conversation = new Conversation({
-              participants: [senderId, receiverId],
-              messages: [],
-              messageCount: 0
-          });
-          await conversation.save();
-          conversationId = conversation._id; // Use the new conversation ID
-      } else {
-        console.log('conversationId',conversationId)
-          // Find existing conversation
-          conversation = await Conversation.findById(conversationId);
-          if (!conversation) {
-              throw new Error('Conversation not found');
-          }
-      }
+            // Ensure both users have this conversation in their inbox
+            await Promise.all([
+                Inbox.updateOne(
+                    { userId: senderId },
+                    { $addToSet: { conversations: conversationId } },
+                    { upsert: true }
+                ),
+                Inbox.updateOne(
+                    { userId: receiverId },
+                    { $addToSet: { conversations: conversationId } },
+                    { upsert: true }
+                )
+            ]);
+        }
 
-      const message = new Message({
-          conversation: conversationId,
-          senderId,
-          messageContent: {
-              type: 'text',
-              content
-          },
-          timestamp: new Date()
-      });
+        // Create and save the message
+        const message = new Message({
+            conversation: conversationId,
+            senderId,
+            messageContent: {
+                type: 'text',
+                content
+            },
+            timestamp: new Date()
+        });
 
-      const savedMessage = await message.save();
+        const savedMessage = await message.save();
 
-      // Update conversation with the new message
-      await Conversation.findByIdAndUpdate(conversationId, {
-          $push: { messages: savedMessage._id },
-          $set: { lastMessage: savedMessage._id },
-          $inc: { messageCount: 1 }
-      });
+        // Update conversation with the new message
+        await Conversation.findByIdAndUpdate(conversationId, {
+            $push: { messages: savedMessage._id },
+            $set: { lastMessage: savedMessage._id },
+            $inc: { messageCount: 1 }
+        });
 
-      return {
-          success: true,
-          message: 'Message sent successfully',
-          data: savedMessage.toObject()
-      };
-  } catch (error) {
-      console.error('Error saving message:', error);
-      throw new Error('Failed to save message: ' + error.message);
-  }
+        return {
+            success: true,
+            message: 'Message sent successfully',
+            data: savedMessage.toObject()
+        };
+    } catch (error) {
+        console.error('Error saving message:', error);
+        throw new Error('Failed to save message: ' + error.message);
+    }
 };
 
 

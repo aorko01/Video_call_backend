@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import models from '../models/message.models.js';
 const { Message, Conversation } = models;
+import Inbox from '../models/Inbox.models.js';
 import User from '../models/user.models.js';
 import mongoose from 'mongoose';
 import path from 'path';
@@ -106,78 +107,54 @@ const sendFile = asyncHandler(async (req, res) => {
 const getConversations = asyncHandler(async (req, res) => {
   try {
     const currentUserId = req.user._id;
+    console.log("currentUserId", currentUserId);
 
-    const conversations = await Conversation.aggregate([
-      // Match conversations involving the current user
-      {
-        $match: {
-          participants: currentUserId
-        }
-      },
-      // Lookup the last message details
-      {
-        $lookup: {
-          from: 'messages',
-          localField: 'lastMessage',
-          foreignField: '_id',
-          as: 'lastMessageDetails'
-        }
-      },
-      // Unwind the last message (it's a single document)
-      {
-        $unwind: '$lastMessageDetails'
-      },
-      // Lookup the other participant details
-      {
-        $lookup: {
-          from: 'users',
-          let: { 
-            participants: '$participants',
-            currentUserId: currentUserId 
+    // Find the user's inbox and populate conversations with details
+    const inbox = await Inbox.findOne({ userId: currentUserId })
+      .populate({
+        path: 'conversations',
+        populate: [
+          {
+            path: 'lastMessage',
+            select: 'messageContent timestamp messageStatus'
           },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $in: ['$_id', '$$participants'] },
-                    { $ne: ['$_id', '$$currentUserId'] }
-                  ]
-                }
-              }
-            }
-          ],
-          as: 'otherParticipant'
-        }
-      },
-      // Unwind the other participant
-      {
-        $unwind: '$otherParticipant'
-      },
-      // Project the final structure
-      {
-        $project: {
-          conversationId: '$_id',
-          otherParticipant: {
-            _id: '$otherParticipant._id',
-            username: '$otherParticipant.username',
-            avatar: '$otherParticipant.avatar'
-          },
-          lastMessage: {
-            content: '$lastMessageDetails.messageContent.content',
-            type: '$lastMessageDetails.messageContent.type',
-            timestamp: '$lastMessageDetails.timestamp',
-            status: '$lastMessageDetails.messageStatus'
-          },
-          messageCount: '$messageCount',
-          updatedAt: '$updatedAt'
-        }
-      },
-      // Sort by the last message timestamp
-      {
-        $sort: { 'lastMessage.timestamp': -1 }
-      }
-    ]);
+          {
+            path: 'participants',
+            match: { _id: { $ne: currentUserId } },
+            select: 'username avatar'
+          }
+        ]
+      });
+
+    if (!inbox) {
+      return res.status(200).json({
+        success: true,
+        message: "No conversations found.",
+        data: []
+      });
+    }
+
+    // Transform conversations to include only necessary details
+    const conversations = inbox.conversations.map(conversation => ({
+      _id: conversation._id,
+      participants: conversation.participants,
+      messageCount: conversation.messageCount,
+      lastMessage: conversation.lastMessage ? {
+        content: conversation.lastMessage.messageContent.content,
+        type: conversation.lastMessage.messageContent.type,
+        timestamp: conversation.lastMessage.timestamp,
+        status: conversation.lastMessage.messageStatus
+      } : null,
+      otherParticipant: conversation.participants[0], // Assuming single other participant
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt
+    }));
+
+    // Sort conversations by last message timestamp
+    conversations.sort((a, b) => 
+      (b.lastMessage?.timestamp || b.updatedAt) - 
+      (a.lastMessage?.timestamp || a.updatedAt)
+    );
 
     return res.status(200).json({
       success: true,
