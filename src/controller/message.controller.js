@@ -177,58 +177,54 @@ const getConversations = asyncHandler(async (req, res) => {
  */
 const getMessages = asyncHandler(async (req, res) => {
   try {
-    const {
-      conversationId, 
-      page = 1, 
-      limit = 50, 
-      messageType,
-      startDate,
-      endDate
-    } = req.body;
+    const { conversationId, page = 1, limit = 50 } = req.body;
 
-    // Validate conversation access
-    const conversation = await Conversation.findById(conversationId);
-    if (!conversation || !conversation.participants.includes(req.user._id)) {
-      return res.status(403).json({
+    // Log conversationId for debugging
+    console.log("Conversation ID:", conversationId);
+
+    // Validate conversation existence and user participation
+    const conversation = await Conversation.findById(conversationId)
+      .populate({
+        path: 'messages',
+        options: {
+          sort: { timestamp: -1 }, // Sort messages by timestamp (most recent first)
+          skip: (page - 1) * limit, // Skip messages for pagination
+          limit: parseInt(limit), // Limit number of messages returned
+        },
+      })
+      .exec();
+
+    if (!conversation) {
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized access to conversation"
+        message: "Conversation not found.",
       });
     }
 
-    // Use the service method for consistent pagination
-    const messageResult = await Message.paginate(
-      {
-        conversation: conversationId,
-        ...(messageType && { 'messageContent.type': messageType }),
-        ...(startDate || endDate) && { 
-          timestamp: {
-            ...(startDate && { $gte: new Date(startDate) }),
-            ...(endDate && { $lte: new Date(endDate) })
-          }
-        }
-      }, 
-      {
-        page,
-        limit,
-        sort: { timestamp: -1 },
-        select: '-__v'
-      }
-    );
+    if (!conversation.participants.includes(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access to conversation.",
+      });
+    }
+
+    // Calculate total number of messages in the conversation
+    const totalMessages = await Message.countDocuments({ conversation: conversationId });
 
     return res.status(200).json({
       success: true,
       message: "Messages retrieved successfully.",
       data: {
-        messages: messageResult.docs,
+        messages: conversation.messages || [],
         pagination: {
-          totalDocs: messageResult.totalDocs,
-          limit: messageResult.limit,
-          page: messageResult.page,
-          totalPages: messageResult.totalPages,
-          hasNextPage: messageResult.hasNextPage,
-          nextPage: messageResult.nextPage
-        }
-      }
+          totalDocs: totalMessages,
+          limit: parseInt(limit),
+          page: parseInt(page),
+          totalPages: Math.ceil(totalMessages / limit),
+          hasNextPage: page * limit < totalMessages,
+          nextPage: page * limit < totalMessages ? page + 1 : null,
+        },
+      },
     });
   } catch (err) {
     console.error("Error fetching messages:", err);
@@ -239,5 +235,7 @@ const getMessages = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
 
 export { sendFile, getConversations, getMessages };

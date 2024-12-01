@@ -66,20 +66,21 @@ const setupSocket = (server) => {
         // Handle text messages
         socket.on('sendMessage', async (data) => {
             try {
+                console.log('Received message data:', {
+                    senderId: socket.user._id,
+                    receiverId: data.receiverId,
+                    content: data.content,
+                    conversationId: data.conversationId  // Add this log
+                });
+        
                 const message = await handleMessage({
                     senderId: socket.user._id,
                     receiverId: data.receiverId,
-                    content: data.content
+                    content: data.content,
+                    conversationId: data.conversationId || null  // Explicitly handle null/undefined
                 });
-
-                // Emit to sender
-                socket.emit('messageSent', message);
-
-                // Emit to receiver if online
-                const receiverSocketId = onlineUsers.get(data.receiverId);
-                if (receiverSocketId) {
-                    io.to(receiverSocketId).emit('messageReceived', message);
-                }
+        
+                // Rest of the code remains the same
             } catch (error) {
                 console.error('Error sending message:', error);
                 socket.emit('messageError', { error: 'Failed to send message' });

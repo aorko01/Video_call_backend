@@ -1,288 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Test</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        .container {
-            display: flex;
-            gap: 20px;
-        }
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .messages {
-            height: 300px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #eee;
-        }
-        .message {
-            margin: 5px 0;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        .sent {
-            background-color: #e3f2fd;
-            margin-left: 20%;
-        }
-        .received {
-            background-color: #f5f5f5;
-            margin-right: 20%;
-        }
-        .input-area {
-            display: flex;
-            gap: 10px;
-        }
-        input[type="text"] {
-            flex: 1;
-            padding: 8px;
-        }
-        button {
-            padding: 8px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .status {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-        }
-        .file-input {
-            margin-bottom: 10px;
-        }
-        .file-preview {
-            max-width: 200px;
-            max-height: 200px;
-            margin: 10px 0;
-        }
-        .message img {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 5px;
-        }
-        .error {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        .status-message {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+      }
+      .container {
+        display: flex;
+        gap: 20px;
+      }
+      .chat-box {
+        flex: 1;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .messages {
+        height: 300px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #eee;
+      }
+      .message {
+        margin: 5px 0;
+        padding: 5px 10px;
+        border-radius: 5px;
+      }
+      .sent {
+        background-color: #e3f2fd;
+        margin-left: 20%;
+      }
+      .received {
+        background-color: #f5f5f5;
+        margin-right: 20%;
+      }
+      .input-area {
+        display: flex;
+        gap: 10px;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 8px;
+      }
+      button {
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .status {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+      }
+      .file-input {
+        margin-bottom: 10px;
+      }
+      .file-preview {
+        max-width: 200px;
+        max-height: 200px;
+        margin: 10px 0;
+      }
+      .message img {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 5px;
+      }
+      .error {
+        background-color: #ffebee;
+        color: #c62828;
+      }
+      .status-message {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="chat-box">
-            <h2>User 1</h2>
-            <div class="status" id="status1">Disconnected</div>
-            <div>
-                <input type="text" id="token1" placeholder="Enter access token" />
-                <button onclick="connectUser1()">Connect</button>
-            </div>
-            <div>
-                <input type="text" id="receiverId1" placeholder="Enter receiver ID" />
-                <input type="text" id="conversationId1" placeholder="Enter conversation ID (optional)" />
-            </div>
-            <div class="messages" id="messages1"></div>
-            <div class="file-input">
-                <input type="file" id="file1" />
-                <button onclick="sendFile1()">Send File</button>
-            </div>
-            <div class="input-area">
-                <input type="text" id="message1" placeholder="Type a message..." />
-                <button onclick="sendMessage1()">Send</button>
-            </div>
+      <div class="chat-box">
+        <h2>User 1</h2>
+        <div class="status" id="status1">Disconnected</div>
+        <div>
+          <input type="text" id="token1" placeholder="Enter access token" />
+          <button onclick="connectUser1()">Connect</button>
         </div>
+        <div>
+          <input type="text" id="receiverId1" placeholder="Enter receiver ID" />
+          <input
+            type="text"
+            id="conversationId1"
+            placeholder="Enter conversation ID (optional)"
+          />
+        </div>
+        <div class="messages" id="messages1"></div>
+        <div class="file-input">
+          <input type="file" id="file1" />
+          <button onclick="sendFile1()">Send File</button>
+        </div>
+        <div class="input-area">
+          <input type="text" id="message1" placeholder="Type a message..." />
+          <button onclick="sendMessage1()">Send</button>
+        </div>
+      </div>
 
-        <div class="chat-box">
-            <h2>User 2</h2>
-            <div class="status" id="status2">Disconnected</div>
-            <div>
-                <input type="text" id="token2" placeholder="Enter access token" />
-                <button onclick="connectUser2()">Connect</button>
-            </div>
-            <div>
-                <input type="text" id="receiverId2" placeholder="Enter receiver ID" />
-                <input type="text" id="conversationId2" placeholder="Enter conversation ID (optional)" />
-            </div>
-            <div class="messages" id="messages2"></div>
-            <div class="file-input">
-                <input type="file" id="file2" />
-                <button onclick="sendFile2()">Send File</button>
-            </div>
-            <div class="input-area">
-                <input type="text" id="message2" placeholder="Type a message..." />
-                <button onclick="sendMessage2()">Send</button>
-            </div>
+      <div class="chat-box">
+        <h2>User 2</h2>
+        <div class="status" id="status2">Disconnected</div>
+        <div>
+          <input type="text" id="token2" placeholder="Enter access token" />
+          <button onclick="connectUser2()">Connect</button>
         </div>
+        <div>
+          <input type="text" id="receiverId2" placeholder="Enter receiver ID" />
+          <input
+            type="text"
+            id="conversationId2"
+            placeholder="Enter conversation ID (optional)"
+          />
+        </div>
+        <div class="messages" id="messages2"></div>
+        <div class="file-input">
+          <input type="file" id="file2" />
+          <button onclick="sendFile2()">Send File</button>
+        </div>
+        <div class="input-area">
+          <input type="text" id="message2" placeholder="Type a message..." />
+          <button onclick="sendMessage2()">Send</button>
+        </div>
+      </div>
     </div>
 
     <script>
-        let socket1 = null;
-        let socket2 = null;
+      let socket1 = null;
+      let socket2 = null;
 
-        const SOCKET_SERVER_URL = 'https://video_call_app.aorko.me';
+      const SOCKET_SERVER_URL = "https://video_call_app.aorko.me";
 
-        function connectSocket(token, statusId) {
-            return new Promise((resolve) => {
-                const socket = io(SOCKET_SERVER_URL, {
-                    auth: { token },
-                    withCredentials: true,
-                    transports: ['websocket', 'polling']
-                });
+      function connectSocket(token, statusId) {
+        return new Promise((resolve) => {
+          const socket = io(SOCKET_SERVER_URL, {
+            auth: { token },
+            withCredentials: true,
+            transports: ["websocket", "polling"],
+          });
 
-                socket.on('connect', () => {
-                    document.getElementById(statusId).textContent = 'Connected';
-                    document.getElementById(statusId).style.color = 'green';
-                    resolve(socket);
-                });
+          socket.on("connect", () => {
+            document.getElementById(statusId).textContent = "Connected";
+            document.getElementById(statusId).style.color = "green";
+            resolve(socket);
+          });
 
-                socket.on('connect_error', (error) => {
-                    document.getElementById(statusId).textContent = `Error: ${error.message}`;
-                    document.getElementById(statusId).style.color = 'red';
-                    resolve(null);
-                });
-            });
+          socket.on("connect_error", (error) => {
+            document.getElementById(
+              statusId
+            ).textContent = `Error: ${error.message}`;
+            document.getElementById(statusId).style.color = "red";
+            resolve(null);
+          });
+        });
+      }
+
+      async function connectUser1() {
+        const token = document.getElementById("token1").value;
+        socket1 = await connectSocket(token, "status1");
+        if (socket1) setupSocketListeners(socket1, "messages1");
+      }
+
+      async function connectUser2() {
+        const token = document.getElementById("token2").value;
+        socket2 = await connectSocket(token, "status2");
+        if (socket2) setupSocketListeners(socket2, "messages2");
+      }
+
+      function setupSocketListeners(socket, messagesId) {
+        socket.on("messageReceived", (message) => {
+          appendMessage(messagesId, message, "received");
+        });
+
+        socket.on("messageSent", (message) => {
+          appendMessage(messagesId, message, "sent");
+        });
+
+        socket.on("messageError", (error) => {
+          appendMessage(
+            messagesId,
+            { content: `Error: ${error.message}` },
+            "error"
+          );
+        });
+
+        socket.on("userStatus", (status) => {
+          appendMessage(
+            messagesId,
+            { content: `User ${status.userId} is ${status.status}` },
+            "status-message"
+          );
+        });
+      }
+
+      function appendMessage(messagesId, message, type) {
+        const messagesDiv = document.getElementById(messagesId);
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}`;
+
+        let content =
+          message.messageContent?.content ||
+          message.content ||
+          "Unknown message";
+        let messageType = message.messageContent?.type || "";
+
+        if (messageType === "image") {
+          const img = document.createElement("img");
+          img.src = content;
+          img.alt = "Image";
+          messageDiv.appendChild(img);
+        } else if (messageType === "file") {
+          const link = document.createElement("a");
+          link.href = content;
+          link.textContent = message.metadata?.filename || "Download File";
+          link.target = "_blank";
+          messageDiv.appendChild(link);
+        } else {
+          messageDiv.textContent = content;
         }
 
-        async function connectUser1() {
-            const token = document.getElementById('token1').value;
-            socket1 = await connectSocket(token, 'status1');
-            if (socket1) setupSocketListeners(socket1, 'messages1');
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      function sendMessage(socket, messageId, receiverId, conversationId) {
+        if (!socket) {
+          alert("Please connect first");
+          return;
         }
 
-        async function connectUser2() {
-            const token = document.getElementById('token2').value;
-            socket2 = await connectSocket(token, 'status2');
-            if (socket2) setupSocketListeners(socket2, 'messages2');
+        const messageInput = document.getElementById(messageId);
+        const receiverInput = document.getElementById(receiverId);
+        const conversationInput = document.getElementById(conversationId);
+
+        // Log the values to debug
+        console.log("Sending message:", {
+          receiverId: receiverInput.value,
+          content: messageInput.value,
+          conversationId: conversationInput.value,
+        });
+
+        socket.emit("sendMessage", {
+          receiverId: receiverInput.value,
+          content: messageInput.value,
+          conversationId: conversationInput.value || null, // Explicitly convert empty string to null
+        });
+
+        messageInput.value = "";
+      }
+
+      async function sendFile(socket, fileId, receiverId, conversationId) {
+        if (!socket) {
+          alert("Please connect first");
+          return;
         }
 
-        function setupSocketListeners(socket, messagesId) {
-            socket.on('messageReceived', (message) => {
-                appendMessage(messagesId, message, 'received');
-            });
+        const fileInput = document.getElementById(fileId);
+        const receiverInput = document.getElementById(receiverId);
+        const conversationInput = document.getElementById(conversationId);
 
-            socket.on('messageSent', (message) => {
-                appendMessage(messagesId, message, 'sent');
-            });
-
-            socket.on('messageError', (error) => {
-                appendMessage(messagesId, { content: `Error: ${error.message}` }, 'error');
-            });
-
-            socket.on('userStatus', (status) => {
-                appendMessage(messagesId, { content: `User ${status.userId} is ${status.status}` }, 'status-message');
-            });
+        const file = fileInput.files[0];
+        if (!file || !receiverInput.value.trim()) {
+          alert("Select a file and enter receiver ID");
+          return;
         }
 
-        function appendMessage(messagesId, message, type) {
-            const messagesDiv = document.getElementById(messagesId);
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
+        const buffer = await file.arrayBuffer();
+        socket.emit("sendFile", {
+          receiverId: receiverInput.value,
+          file: {
+            buffer,
+            mimetype: file.type,
+            originalname: file.name,
+            size: file.size,
+          },
+          fileType: file.type.startsWith("image/") ? "image" : "document",
+          filename: file.name,
+          conversationId: conversationInput.value || null, // Explicitly pass null if empty
+        });
 
-            let content = message.messageContent?.content || message.content || 'Unknown message';
-            let messageType = message.messageContent?.type || '';
+        fileInput.value = "";
+      }
 
-            if (messageType === 'image') {
-                const img = document.createElement('img');
-                img.src = content;
-                img.alt = 'Image';
-                messageDiv.appendChild(img);
-            } else if (messageType === 'file') {
-                const link = document.createElement('a');
-                link.href = content;
-                link.textContent = message.metadata?.filename || 'Download File';
-                link.target = '_blank';
-                messageDiv.appendChild(link);
-            } else {
-                messageDiv.textContent = content;
-            }
+      function sendMessage1() {
+        sendMessage(socket1, "message1", "receiverId1", "conversationId1");
+      }
 
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+      function sendMessage2() {
+        sendMessage(socket2, "message2", "receiverId2", "conversationId2");
+      }
 
-        function sendMessage(socket, messageId, receiverId, conversationId) {
-            if (!socket) {
-                alert('Please connect first');
-                return;
-            }
+      function sendFile1() {
+        sendFile(socket1, "file1", "receiverId1", "conversationId1");
+      }
 
-            const messageInput = document.getElementById(messageId);
-            const receiverInput = document.getElementById(receiverId);
-            const conversationInput = document.getElementById(conversationId);
-
-            socket.emit('sendMessage', {
-                receiverId: receiverInput.value,
-                content: messageInput.value,
-                conversationId: conversationInput.value || null
-            });
-
-            messageInput.value = '';
-        }
-
-        async function sendFile(socket, fileId, receiverId, conversationId) {
-            if (!socket) {
-                alert('Please connect first');
-                return;
-            }
-
-            const fileInput = document.getElementById(fileId);
-            const receiverInput = document.getElementById(receiverId);
-            const conversationInput = document.getElementById(conversationId);
-
-            const file = fileInput.files[0];
-            if (!file || !receiverInput.value.trim()) {
-                alert('Select a file and enter receiver ID');
-                return;
-            }
-
-            const buffer = await file.arrayBuffer();
-            socket.emit('sendFile', {
-                receiverId: receiverInput.value,
-                file: { buffer, mimetype: file.type, originalname: file.name, size: file.size },
-                fileType: file.type.startsWith('image/') ? 'image' : 'document',
-                filename: file.name,
-                conversationId: conversationInput.value || null
-            });
-
-            fileInput.value = '';
-        }
-
-        function sendMessage1() {
-            sendMessage(socket1, 'message1', 'receiverId1', 'conversationId1');
-        }
-
-        function sendMessage2() {
-            sendMessage(socket2, 'message2', 'receiverId2', 'conversationId2');
-        }
-
-        function sendFile1() {
-            sendFile(socket1, 'file1', 'receiverId1', 'conversationId1');
-        }
-
-        function sendFile2() {
-            sendFile(socket2, 'file2', 'receiverId2', 'conversationId2');
-        }
+      function sendFile2() {
+        sendFile(socket2, "file2", "receiverId2", "conversationId2");
+      }
     </script>
-</body>
+  </body>
 </html>

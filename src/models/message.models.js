@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
+import cron from 'node-cron';
 
 // Conversation Schema with Indexing
 const conversationSchema = new mongoose.Schema({
@@ -23,7 +24,6 @@ const conversationSchema = new mongoose.Schema({
 }, { 
   timestamps: true,
   indexes: [
-    // Compound index for efficient participant-based lookup
     { 
       participants: 1,
       'lastMessage.timestamp': -1 
@@ -37,13 +37,13 @@ const messageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Conversation',
     required: true,
-    index: true // Index for faster conversation-based queries
+    index: true
   },
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true // Index for sender-based queries
+    index: true
   },
   messageContent: {
     type: {
@@ -59,13 +59,13 @@ const messageSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     default: Date.now,
-    index: true // Index for time-based queries
+    index: true
   },
   messageStatus: {
     type: String,
     enum: ['sent', 'delivered', 'read'],
     default: 'sent',
-    index: true // Index for message status filtering
+    index: true
   }
 }, { 
   timestamps: true 
@@ -104,7 +104,7 @@ const archivedMessageSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     required: true,
-    index: { expires: '6 months' } // Auto-remove after 6 months
+    index: { expires: '6 months' }
   },
   archivedAt: {
     type: Date,
@@ -113,12 +113,12 @@ const archivedMessageSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Add text index for content searching in archived messages
-archivedMessageSchema.index({ 'messageContent.content': 'text' });
-
-// Plugins
+// Apply pagination plugin BEFORE model creation
 messageSchema.plugin(mongooseAggregatePaginate);
 archivedMessageSchema.plugin(mongooseAggregatePaginate);
+
+// Add text index for content searching in archived messages
+archivedMessageSchema.index({ 'messageContent.content': 'text' });
 
 // Message Archiving Service
 class MessageArchivingService {
@@ -137,7 +137,7 @@ class MessageArchivingService {
       // Find messages to archive
       const messagesToArchive = await Message.find({
         timestamp: { $lt: archiveDate }
-      }).limit(1000).session(session); // Batch process
+      }).limit(1000).session(session);
 
       // Prepare archived messages
       const archivedMessagesData = messagesToArchive.map(message => ({
@@ -163,7 +163,7 @@ class MessageArchivingService {
           { messages: { $in: messagesToArchive.map(m => m._id) } },
           { 
             $pullAll: { messages: messagesToArchive.map(m => m._id) },
-            $dec: { messageCount: messagesToArchive.length }
+            $inc: { messageCount: -messagesToArchive.length }
           },
           { session }
         );
@@ -212,7 +212,7 @@ class MessageArchivingService {
       page,
       limit,
       sort: { timestamp: sortDirection },
-      select: '-__v' // Exclude version key
+      select: '-__v'
     });
   }
 
@@ -242,15 +242,12 @@ class MessageArchivingService {
       page,
       limit,
       sort: { timestamp: sortDirection },
-      select: '-__v' // Exclude version key
+      select: '-__v'
     });
   }
 }
 
-// Scheduled Task Setup (example using node-cron)
-import cron from 'node-cron';
-
-// Run daily at midnight
+// Scheduled Task Setup
 cron.schedule('0 0 * * *', async () => {
   try {
     const result = await MessageArchivingService.archiveOldMessages();

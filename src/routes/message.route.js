@@ -1,4 +1,4 @@
-import { sendFile,getConversations } from '../controller/message.controller.js';
+import { sendFile,getConversations,getMessages } from '../controller/message.controller.js';
 import { Router } from 'express';
 import { upload } from '../middleware/multer.middleware.js';
 import { send } from 'process';
@@ -10,6 +10,8 @@ const router = Router();
 router.post('/sendfile', upload.single('file'), sendFile);
 
 router.get('/conversations',verifyJWT,getConversations);
+
+router.post('/get-messages',verifyJWT,getMessages);
 
 
 

@@ -14,6 +14,7 @@ const isValidFileType = (mimetype, allowedTypes) => {
 export const handleMessage = async ({ senderId, receiverId, content, conversationId }) => {
     try {
         let conversation;
+        console.log(conversationId);
         
         if (!conversationId) {
             // Create a new conversation if no ID is provided
